@@ -1,15 +1,39 @@
 <?php
 $servername = "localhost";
-$username = "reclamation_user";
-$password = "password123";
+// For this setup script, we will use the 'root' user which has privileges to create a database.
+// The main application will still use the 'reclamation_user'.
+$setup_username = "root";
+$setup_password = ""; // Default XAMPP root password is empty. Change if you have set one.
 $dbname = "reclamation_db";
 
-// Connect to the new database
-$conn = new mysqli($servername, $username, $password, $dbname);
+// --- Step 1: Connect as root and create the database ---
+$conn_setup = new mysqli($servername, $setup_username, $setup_password);
 
 // Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+if ($conn_setup->connect_error) {
+    die("Connection failed: " . $conn_setup->connect_error . "\n" . "Please ensure your MySQL server is running and the root user credentials are correct.");
+}
+
+// Create database if it doesn't exist
+$sql_create_db = "CREATE DATABASE IF NOT EXISTS $dbname";
+if ($conn_setup->query($sql_create_db) === TRUE) {
+    echo "Database '$dbname' created successfully or already exists.\n";
+} else {
+    echo "Error creating database: " . $conn_setup->error . "\n";
+    $conn_setup->close();
+    exit();
+}
+$conn_setup->close();
+
+
+// --- Step 2: Connect to the new database as the application user and create tables ---
+$app_username = "reclamation_user";
+$app_password = "password123";
+$conn_app = new mysqli($servername, $app_username, $app_password, $dbname);
+
+// Check connection
+if ($conn_app->connect_error) {
+    die("Connection to database '$dbname' failed: " . $conn_app->connect_error . "\n" . "This usually means the 'reclamation_user' has not been created or has the wrong password. Please run the user creation SQL commands.");
 }
 
 // SQL to create tables
@@ -67,11 +91,19 @@ CREATE TABLE IF NOT EXISTS `commentaires` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ";
 
-if ($conn->multi_query($sql_tables)) {
-    echo "Tables created successfully\n";
+if ($conn_app->multi_query($sql_tables)) {
+    // This loop is necessary to clear results from multi_query before running another query
+    while ($conn_app->next_result()) {
+        if ($res = $conn_app->store_result()) {
+            $res->free();
+        }
+    }
+    echo "Tables created successfully.\n";
 } else {
-    echo "Error creating tables: " . $conn->error . "\n";
+    echo "Error creating tables: " . $conn_app->error . "\n";
 }
 
-$conn->close();
+$conn_app->close();
+
+echo "Setup complete!\n";
 ?>
