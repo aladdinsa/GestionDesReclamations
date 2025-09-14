@@ -1,5 +1,16 @@
 <?php
-require_once "includes/config.php";
+require_once "../includes/config.php";
+
+if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true || $_SESSION["role"] !== 'admin'){
+    header("location: ../index.php");
+    exit;
+}
+
+if(!isset($_GET['role']) || ($_GET['role'] !== 'admin' && $_GET['role'] !== 'gerant')){
+    header("location: select_role.php");
+    exit;
+}
+$role = $_GET['role'];
 
 $nom = $prenom = $email = $password = $confirm_password = "";
 $nom_err = $prenom_err = $email_err = $password_err = $confirm_password_err = "";
@@ -56,15 +67,16 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     }
 
     if(empty($nom_err) && empty($prenom_err) && empty($email_err) && empty($password_err) && empty($confirm_password_err)){
-        $sql = "INSERT INTO utilisateurs (nom, prenom, email, mot_de_passe, role) VALUES (?, ?, ?, ?, 'gerant')";
+        $sql = "INSERT INTO utilisateurs (nom, prenom, email, mot_de_passe, role) VALUES (?, ?, ?, ?, ?)";
         if($stmt = $conn->prepare($sql)){
-            $stmt->bind_param("ssss", $param_nom, $param_prenom, $param_email, $param_password);
+            $stmt->bind_param("sssss", $param_nom, $param_prenom, $param_email, $param_password, $param_role);
             $param_nom = $nom;
             $param_prenom = $prenom;
             $param_email = $email;
             $param_password = password_hash($password, PASSWORD_DEFAULT);
+            $param_role = $role;
             if($stmt->execute()){
-                header("location: index.php");
+                header("location: utilisateurs.php");
             } else{
                 echo "Oops! Something went wrong. Please try again later.";
             }
@@ -74,13 +86,13 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     $conn->close();
 }
 
-include 'includes/header.php';
+include '../includes/header.php';
 ?>
 
 <div class="wrapper">
-    <h2>Sign Up</h2>
+    <h2>Create User (Role: <?php echo htmlspecialchars($role); ?>)</h2>
     <p>Please fill this form to create an account.</p>
-    <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post">
+    <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]) . "?role=" . $role; ?>" method="post">
         <div class="form-group">
             <label>Name</label>
             <input type="text" name="nom" class="form-control <?php echo (!empty($nom_err)) ? 'is-invalid' : ''; ?>" value="<?php echo $nom; ?>">
@@ -108,10 +120,9 @@ include 'includes/header.php';
         </div>
         <div class="form-group">
             <input type="submit" class="btn btn-primary" value="Submit">
-            <input type="reset" class="btn btn-secondary ml-2" value="Reset">
+            <a href="utilisateurs.php" class="btn btn-secondary ml-2">Cancel</a>
         </div>
-        <p>Already have an account? <a href="index.php">Login here</a>.</p>
     </form>
 </div>
 
-<?php include 'includes/footer.php'; ?>
+<?php include '../includes/footer.php'; ?>
