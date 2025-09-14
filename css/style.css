@@ -21,6 +21,10 @@ body {
     color: var(--text-color);
     background-color: var(--background-color);
     margin: 0;
+    background-image: url('');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
 }
 
 h1, h2, h3 {
